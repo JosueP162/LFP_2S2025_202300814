@@ -1,0 +1,159 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title> Call History Report </title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    background-color: #f4f4f4;
+                }
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                    padding: 20px;
+                }
+                h1 {
+                    color: #2c3e50;
+                    text-align: center;
+                    margin-bottom: 30px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px 0;
+                }
+                th, td {
+                    padding: 12px;
+                    border: 1px solid #ddd;
+                    text-align: left;
+                }
+                th {
+                    background-color: #3498db;
+                    color: white;
+                    font-weight: bold;
+                }
+                tr:nth-child(even) {
+                    background-color: #f2f2f2;
+                }
+                tr:hover {
+                    background-color: #e8f4fd;
+                }
+                .buena{
+                    color: #27ea60;
+                    font-weight: bold;
+                }
+                .media{
+                    color: #e3e327;
+                    font-weight: bold;
+                }
+                .mala{
+                    color: #e42424ff;
+                    font-weight: bold;
+                }
+                .stars{
+                    color: #f1c40f;
+                    font-size: 16px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1> Call Center History Calls</h1>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Operator Id</th>
+                            <th>Operato's name</th>
+                            <th>Client Id</th>
+                            <th>Grade</th>
+                            <th>rating</th>
+                        </tr>
+                    </thead> 
+                    <tbody>
+                        
+                        <tr>
+                            <td>1</td>
+                            <td>Juan Perez</td>
+                            <td>101</td>
+                            <td>Maria Garcia</td>
+                            <td class ="stars">*****(5)</td>
+                            <td class ="buena">Buena</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>2</td>
+                            <td>Ana Lopez</td>
+                            <td>102</td>
+                            <td>Carlos Rodriguez</td>
+                            <td class ="stars">***(3)</td>
+                            <td class ="media">Media</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>1</td>
+                            <td>Juan Perez</td>
+                            <td>103</td>
+                            <td>Laura Martinez</td>
+                            <td class ="stars">**(2)</td>
+                            <td class ="media">Media</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>3</td>
+                            <td>Pedro Sanchez</td>
+                            <td>104</td>
+                            <td>Roberto Silva</td>
+                            <td class ="stars">****(4)</td>
+                            <td class ="buena">Buena</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>2</td>
+                            <td>Ana Lopez</td>
+                            <td>105</td>
+                            <td>Sofia Hernandez</td>
+                            <td class ="stars">*(1)</td>
+                            <td class ="mala">Mala</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>3</td>
+                            <td>Pedro Sanchez</td>
+                            <td>101</td>
+                            <td>Maria Garcia</td>
+                            <td class ="stars">***(3)</td>
+                            <td class ="media">Media</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>1</td>
+                            <td>Juan Perez</td>
+                            <td>106</td>
+                            <td>Diego Morales</td>
+                            <td class ="stars">*****(5)</td>
+                            <td class ="buena">Buena</td>
+                        </tr>    
+                        
+                        <tr>
+                            <td>2</td>
+                            <td>Ana Lopez</td>
+                            <td>107</td>
+                            <td>Carmen Jimenez</td>
+                            <td class ="stars">***(3)</td>
+                            <td class ="media">Media</td>
+                        </tr>    
+                        
+                    </tbody>
+                </table>
+                <p><strong>Total Calls:</strong>8</p>
+                <p><em>Reporte generado el: 24/8/2025, 21:00:44</em></p>
+            </div>
+        </body>
+        </html>
