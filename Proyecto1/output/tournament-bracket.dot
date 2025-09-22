@@ -1,0 +1,48 @@
+digraph TournamentBracket {
+    rankdir=LR;
+    node [shape=box, style="filled,rounded", fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    bgcolor=white;
+    pad=0.5;
+
+    // Cuartos de Final
+    subgraph cluster_cuartos {
+        label="Cuartos de Final";
+        style=filled;
+        color=lightblue;
+        fillcolor="lightblue:white";
+        fontname="Arial Bold";
+        cuarto1 [label="Real Madrid\nvs\nBarcelona\n3-1", fillcolor="lightgreen", fontcolor="black"];
+        cuarto2 [label="Manchester City\nvs\nPSG\n2-1", fillcolor="lightgreen", fontcolor="black"];
+    }
+
+    // Semifinal
+    subgraph cluster_semifinal {
+        label="Semifinal";
+        style=filled;
+        color=lightcyan;
+        fillcolor="lightcyan:white";
+        fontname="Arial Bold";
+        semi1 [label="Real Madrid\nvs\nManchester City\n1-0", fillcolor="lightgreen"];
+    }
+
+    // Final
+    subgraph cluster_final {
+        label="Final";
+        style=filled;
+        color=gold;
+        fillcolor="gold:white";
+        fontname="Arial Bold";
+        final1 [label="CAMPEÓN\nReal Madrid\n2-1", fillcolor="orange", fontcolor="white", fontsize=14, style="filled,rounded,bold"];
+    }
+
+    // Conexiones
+    cuarto1 -> semi1 [label="Real Madrid"];
+    cuarto2 -> semi1 [label="Manchester City"];
+
+    // Configuración
+    label="Bracket de Eliminación";
+    fontsize=20;
+    fontname="Arial Bold";
+    labelloc="t";
+}

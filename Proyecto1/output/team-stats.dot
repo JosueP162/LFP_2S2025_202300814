@@ -1,0 +1,14 @@
+digraph TeamStats {
+    rankdir=TB;
+    node [shape=record, style=filled, fontname="Arial"];
+    bgcolor=white;
+
+    team0 [label="{Real Madrid|J: 3|G: 3|P: 0|GF: 6|GC: 2|GD: +4|Campeón}", fillcolor="gold"];
+    team1 [label="{Barcelona|J: 1|G: 0|P: 1|GF: 1|GC: 3|GD: -2|Cuartos}", fillcolor="lightblue"];
+    team2 [label="{Manchester City|J: 2|G: 1|P: 1|GF: 2|GC: 2|GD: +0|Semifinal}", fillcolor="lightgreen"];
+    team3 [label="{PSG|J: 1|G: 0|P: 1|GF: 1|GC: 2|GD: -1|Cuartos}", fillcolor="lightblue"];
+
+    label="Estadísticas por Equipo";
+    fontsize=16;
+    fontname="Arial Bold";
+}
