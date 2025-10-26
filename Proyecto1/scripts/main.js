@@ -4,8 +4,8 @@ if (typeof global === 'undefined') {
 
 
 // Importar módulos del analizador
-import { TourneyScanner } from '../src/core/TourneyScanner.js';
-import { TourneyParser } from '../src/core/TourneyParser.js';
+import { TourneyScanner } from '../src/Core/TourneyScanner.js';
+import { TourneyParser } from '../src/Core/TourneyParser.js';
 import { HTMLReportGenerator } from '../src/generators/HTMLReportGenerator.js';
 import { GraphvizGenerator } from '../src/Generators/GraphvizGenerator.js';
 
@@ -278,10 +278,13 @@ class TourneyInterface {
     }
 
     enableReports() {
-        const hasValidTournament = this.tournament !== null;
-        this.generateHtmlBtn.disabled = !hasValidTournament;
-        this.generateGraphvizBtn.disabled = !hasValidTournament;
-        this.downloadAllBtn.disabled = !hasValidTournament;
+    // Permitir reportes si hay contenido mínimo, incluso con errores
+    const hasMinimalContent = this.tournament !== null && 
+                             (this.tournament.nombre || this.tournament.equipos.length > 0);
+    
+    this.generateHtmlBtn.disabled = !hasMinimalContent;
+    this.generateGraphvizBtn.disabled = !hasMinimalContent;
+    this.downloadAllBtn.disabled = !hasMinimalContent;
     }
 
     generateHTML() {
@@ -333,8 +336,7 @@ class TourneyInterface {
                         <li><strong>tournament-bracket.dot</strong> - Bracket de eliminación</li>
                         <li><strong>team-stats.dot</strong> - Estadísticas de equipos</li>
                     </ul>
-                    <p><strong>Para visualizar:</strong></p>
-                    <p>Usa <a href="http://magjac.com/graphviz-visual-editor/" target="_blank">Graphviz Online</a> o instala Graphviz localmente.</p>
+                    
                 </div>
             `;
         } catch (error) {

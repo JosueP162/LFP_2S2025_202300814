@@ -1,4 +1,3 @@
-// TourneyParser.js - Con imports corregidos según la estructura de carpetas
 import { Tournament } from '../Models/Tournament.js';
 import { Player } from '../Models/Player.js';
 import { Match } from '../Models/Match.js';
@@ -17,18 +16,36 @@ export class TourneyParser {
     }
 
     parse() {
-        // Initialize global errors if not exists
-        if (!global.errors) {
-            global.errors = [];
+        if (!window.global) {
+            window.global = {};
+        }
+        if (!window.global.errors) {
+            window.global.errors = [];
         }
         
-        this.#INICIO();
-        
-        if (!this.#match(TokenTypes.EOF)) {
-            this.#addError(`No se esperaba «${this.#currentToken.lexeme}»`);
+        try {
+            this.#INICIO();
+        } catch (error) {
+            this.#addError(`Error cri­tico en el parser: ${error.message}`);
         }
         
-        return global.errors.length === 0 ? this.#tournament : null;
+        // Siempre devolver el torneo, incluso si hay errores
+        return this.#tournament;
+    }
+
+    #addError(message) {
+        if (!window.global) {
+            window.global = {};
+        }
+        if (!window.global.errors) {
+            window.global.errors = [];
+        }
+        window.global.errors.push({
+            numero: window.global.errors.length + 1,
+            descripcion: message,
+            linea: this.#currentToken?.line || 0,
+            columna: this.#currentToken?.column || 0
+        });
     }
 
     #INICIO() {
@@ -36,16 +53,60 @@ export class TourneyParser {
     }
 
     #ESTRUCTURA_TORNEO() {
-        if (this.#match(TokenTypes.TORNEO)) {
-            this.#SECCION_TORNEO();
+        // Procesar secciones principales con recuperacion 
+        this.#procesarSeccionTorneo();
+        this.#procesarSeccionEquipos();
+        this.#procesarSeccionEliminacion();
+    }
+
+    // metodo para procesar seccion TORNEO
+    #procesarSeccionTorneo() {
+        // Buscar la palabra clave TORNEO
+        while (!this.#match(TokenTypes.EOF)) {
+            if (this.#match(TokenTypes.TORNEO)) {
+                try {
+                    this.#SECCION_TORNEO();
+                } catch (error) {
+                    this.#addError(`Error en seccion TORNEO: ${error.message}`);
+                    this.#sincronizarHastaLlaveCerrada();
+                }
+                return;
+            }
+            this.#avanzarToken();
         }
-        
-        if (this.#match(TokenTypes.EQUIPOS)) {
-            this.#SECCION_EQUIPOS();
+    }
+
+    // metodo para procesar seccion EQUIPOS
+    #procesarSeccionEquipos() {
+        // Buscar la palabra clave EQUIPOS
+        while (!this.#match(TokenTypes.EOF)) {
+            if (this.#match(TokenTypes.EQUIPOS)) {
+                try {
+                    this.#SECCION_EQUIPOS();
+                } catch (error) {
+                    this.#addError(`Error en seccion EQUIPOS: ${error.message}`);
+                    this.#sincronizarHastaLlaveCerrada();
+                }
+                return;
+            }
+            this.#avanzarToken();
         }
-        
-        if (this.#match(TokenTypes.ELIMINACION)) {
-            this.#SECCION_ELIMINACION();
+    }
+
+    // metodo para procesar secciÃ³n ELIMINACION
+    #procesarSeccionEliminacion() {
+        // Buscar la palabra clave ELIMINACION
+        while (!this.#match(TokenTypes.EOF)) {
+            if (this.#match(TokenTypes.ELIMINACION)) {
+                try {
+                    this.#SECCION_ELIMINACION();
+                } catch (error) {
+                    this.#addError(`Error en seccion ELIMINACION: ${error.message}`);
+                    this.#sincronizarHastaLlaveCerrada();
+                }
+                return;
+            }
+            this.#avanzarToken();
         }
     }
 
@@ -57,69 +118,106 @@ export class TourneyParser {
     }
 
     #ATRIBUTOS_TORNEO() {
-        this.#ATRIBUTO_TORNEO();
-        
-        while (this.#match(TokenTypes.TK_coma)) {
-            this.#consume(TokenTypes.TK_coma);
-            if (!this.#match(TokenTypes.TK_llave_der)) {
+        // Procesar atributos con recuperacion
+        while (!this.#match(TokenTypes.TK_llave_der) && !this.#match(TokenTypes.EOF)) {
+            try {
                 this.#ATRIBUTO_TORNEO();
+                
+                // Saltar comas opcionales
+                if (this.#match(TokenTypes.TK_coma)) {
+                    this.#consume(TokenTypes.TK_coma);
+                }
+            } catch (error) {
+                this.#addError(`Error procesando atributo del torneo: ${error.message}`);
+                this.#saltarHastaProximoAtributoOCierre();
             }
         }
     }
 
     #ATRIBUTO_TORNEO() {
-    if (this.#match(TokenTypes.KW_nombre)) {
-        this.#consume(TokenTypes.KW_nombre);
-        this.#consume(TokenTypes.TK_dos_puntos);
-        const nombre = this.#consume(TokenTypes.TK_cadena);
-        try {
-            this.#tournament.nombre = nombre?.lexeme || '';
-        } catch (error) {
-            this.#addError(error.message);
-        }
-    } else if (this.#match(TokenTypes.KW_sede)) {  // NUEVO
-        this.#consume(TokenTypes.KW_sede);
-        this.#consume(TokenTypes.TK_dos_puntos);
-        const sede = this.#consume(TokenTypes.TK_cadena);
-        try {
-            this.#tournament.sede = sede?.lexeme || '';  // Agregar sede
-        } catch (error) {
-            this.#addError(error.message);
-        }
-    } else {
-        // Handle "equipos" as identifier
-        this.#currentToken = this.#scanner.look_ahead();
-        if (this.#currentToken.lexeme === 'equipos') {
-            this.#scanner.next_token();
+        if (this.#match(TokenTypes.KW_nombre)) {
+            this.#consume(TokenTypes.KW_nombre);
             this.#consume(TokenTypes.TK_dos_puntos);
-            const cantidad = this.#consume(TokenTypes.TK_numero);
+            const nombre = this.#consume(TokenTypes.TK_cadena);
             try {
-                this.#tournament.cantidadEquipos = parseInt(cantidad?.lexeme || '0');
+                this.#tournament.nombre = nombre?.lexeme || '';
             } catch (error) {
                 this.#addError(error.message);
             }
+        } else if (this.#match(TokenTypes.KW_sede)) {
+            this.#consume(TokenTypes.KW_sede);
+            this.#consume(TokenTypes.TK_dos_puntos);
+            const sede = this.#consume(TokenTypes.TK_cadena);
+            try {
+                this.#tournament.sede = sede?.lexeme || '';
+            } catch (error) {
+                this.#addError(error.message);
+            }
+        } else {
+            // Manejar "equipos" como identificador
+            this.#currentToken = this.#scanner.look_ahead();
+            if (this.#currentToken.lexeme === 'equipos') {
+                this.#avanzarToken();
+                this.#consume(TokenTypes.TK_dos_puntos);
+                const cantidad = this.#consume(TokenTypes.TK_numero);
+                try {
+                    this.#tournament.cantidadEquipos = parseInt(cantidad?.lexeme || '0');
+                } catch (error) {
+                    this.#addError(error.message);
+                }
+            } else {
+                // Token inesperado, saltar
+                this.#addError(`Atributo de torneo no reconocido: ${this.#currentToken?.lexeme}`);
+                this.#avanzarToken();
+            }
         }
     }
-}
 
     #SECCION_EQUIPOS() {
         this.#consume(TokenTypes.EQUIPOS);
         this.#consume(TokenTypes.TK_llave_izq);
-        this.#LISTA_EQUIPOS();
+        this.#LISTA_EQUIPOS_();
         this.#consume(TokenTypes.TK_llave_der);
     }
 
-    #LISTA_EQUIPOS() {
-        if (this.#match(TokenTypes.KW_equipo)) {
-            this.#DEFINICION_EQUIPO();
+    #LISTA_EQUIPOS_() {
+        while (!this.#match(TokenTypes.TK_llave_der) && !this.#match(TokenTypes.EOF)) {
+            this.#skipOptionalSemicolons();
             
-            while (this.#match(TokenTypes.TK_coma)) {
-                this.#consume(TokenTypes.TK_coma);
-                if (this.#match(TokenTypes.KW_equipo)) {
+            if (this.#match(TokenTypes.TK_llave_der) || this.#match(TokenTypes.EOF)) {
+                break;
+            }
+            
+            if (this.#match(TokenTypes.KW_equipo)) {
+                try {
                     this.#DEFINICION_EQUIPO();
+                    
+                    if (this.#match(TokenTypes.TK_coma)) {
+                        this.#consume(TokenTypes.TK_coma);
+                    } else if (this.#match(TokenTypes.TK_punto_coma)) {
+                        this.#consume(TokenTypes.TK_punto_coma);
+                    }
+                    
+                    this.#skipOptionalSemicolons();
+                    
+                } catch (error) {
+                    this.#addError(`Error procesando equipo: ${error.message}`);
+                    this.#saltarHastaProximoEquipoOCierre();
                 }
+            } else {
+                this.#addError(`Se esperaba 'equipo', se encontrado '${this.#currentToken?.lexeme}'`);
+                this.#saltarHastaProximoEquipoOCierre();
             }
         }
+    }
+
+    #saltarHastaProximoEquipoOCierre() {
+        while (!this.#match(TokenTypes.EOF) && 
+               !this.#match(TokenTypes.KW_equipo) && 
+               !this.#match(TokenTypes.TK_llave_der)) {
+            this.#avanzarToken();
+        }
+        this.#skipOptionalSemicolons();
     }
 
     #DEFINICION_EQUIPO() {
@@ -130,9 +228,10 @@ export class TourneyParser {
         try {
             const equipo = new Team(nombreEquipo?.lexeme || '');
             
+            // Procesar jugadores si hay corchetes
             if (this.#match(TokenTypes.TK_corchete_izq)) {
                 this.#consume(TokenTypes.TK_corchete_izq);
-                this.#LISTA_JUGADORES(equipo);
+                this.#LISTA_JUGADORES_(equipo);
                 this.#consume(TokenTypes.TK_corchete_der);
             }
             
@@ -142,30 +241,38 @@ export class TourneyParser {
         }
     }
 
-    #LISTA_JUGADORES(equipo) {
-        if (this.#match(TokenTypes.KW_jugador)) {
-            const jugador = this.#DEFINICION_JUGADOR();
-            if (jugador) {
+    // Lista de jugadores 
+    #LISTA_JUGADORES_(equipo) {
+        while (!this.#match(TokenTypes.TK_llave_der) && !this.#match(TokenTypes.EOF)) {
+            if (this.#match(TokenTypes.KW_jugador)) {
                 try {
-                    equipo.addJugador(jugador);
-                } catch (error) {
-                    this.#addError(error.message);
-                }
-            }
-            
-            while (this.#match(TokenTypes.TK_coma)) {
-                this.#consume(TokenTypes.TK_coma);
-                if (this.#match(TokenTypes.KW_jugador)) {
                     const jugador = this.#DEFINICION_JUGADOR();
                     if (jugador) {
-                        try {
-                            equipo.addJugador(jugador);
-                        } catch (error) {
-                            this.#addError(error.message);
-                        }
+                        equipo.addJugador(jugador);
                     }
+                    
+                    // Saltar coma opcional
+                    if (this.#match(TokenTypes.TK_coma)) {
+                        this.#consume(TokenTypes.TK_coma);
+                    }
+                } catch (error) {
+                    this.#addError(`Error procesando jugador: ${error.message}`);
+                    this.#saltarHastaProximoJugadorOCierre();
                 }
+            } else {
+                // Token inesperado
+                this.#addError(`Se esperaba 'jugador', se encontrado³ '${this.#currentToken?.lexeme}'`);
+                this.#saltarHastaProximoJugadorOCierre();
             }
+        }
+    }
+
+    // Saltar hasta el proximo jugador o cierre
+    #saltarHastaProximoJugadorOCierre() {
+        while (!this.#match(TokenTypes.EOF) && 
+               !this.#match(TokenTypes.KW_jugador) && 
+               !this.#match(TokenTypes.TK_llave_der)) {
+            this.#avanzarToken();
         }
     }
 
@@ -179,7 +286,7 @@ export class TourneyParser {
             
             if (this.#match(TokenTypes.TK_corchete_izq)) {
                 this.#consume(TokenTypes.TK_corchete_izq);
-                this.#ATRIBUTOS_JUGADOR(jugador);
+                this.#ATRIBUTOS_JUGADOR_ROBUSTO(jugador);
                 this.#consume(TokenTypes.TK_corchete_der);
             }
             
@@ -190,14 +297,30 @@ export class TourneyParser {
         }
     }
 
-    #ATRIBUTOS_JUGADOR(jugador) {
-        this.#ATRIBUTO_JUGADOR(jugador);
-        
-        while (this.#match(TokenTypes.TK_coma)) {
-            this.#consume(TokenTypes.TK_coma);
-            if (!this.#match(TokenTypes.TK_corchete_der)) {
+    // Atributos de jugador
+    #ATRIBUTOS_JUGADOR_ROBUSTO(jugador) {
+        while (!this.#match(TokenTypes.TK_corchete_der) && !this.#match(TokenTypes.EOF)) {
+            try {
                 this.#ATRIBUTO_JUGADOR(jugador);
+                
+                if (this.#match(TokenTypes.TK_coma)) {
+                    this.#consume(TokenTypes.TK_coma);
+                }
+            } catch (error) {
+                this.#addError(`Error en atributo de jugador: ${error.message}`);
+                this.#saltarHastaProximoAtributoJugadorOCierre();
             }
+        }
+    }
+
+    // Saltar hasta proximo atributo de jugador
+    #saltarHastaProximoAtributoJugadorOCierre() {
+        while (!this.#match(TokenTypes.EOF) && 
+               !this.#match(TokenTypes.KW_posicion) &&
+               !this.#match(TokenTypes.KW_numero) &&
+               !this.#match(TokenTypes.KW_edad) &&
+               !this.#match(TokenTypes.TK_corchete_der)) {
+            this.#avanzarToken();
         }
     }
 
@@ -229,9 +352,14 @@ export class TourneyParser {
             } catch (error) {
                 this.#addError(error.message);
             }
+        } else {
+            // Atributo no reconocido
+            this.#addError(`Atributo de jugador no reconocido: ${this.#currentToken?.lexeme}`);
+            this.#avanzarToken();
         }
     }
 
+    
     #SECCION_ELIMINACION() {
         this.#consume(TokenTypes.ELIMINACION);
         this.#consume(TokenTypes.TK_llave_izq);
@@ -240,16 +368,55 @@ export class TourneyParser {
     }
 
     #LISTA_FASES() {
-        this.#FASE();
-        
-        while (this.#match(TokenTypes.TK_coma)) {
-            this.#consume(TokenTypes.TK_coma);
-            if (!this.#match(TokenTypes.TK_llave_der)) {
-                this.#FASE();
+        while (!this.#match(TokenTypes.TK_llave_der) && !this.#match(TokenTypes.EOF)) {
+            this.#skipOptionalSemicolons();
+            
+            if (this.#match(TokenTypes.TK_llave_der) || this.#match(TokenTypes.EOF)) {
+                break;
             }
+            
+            if (this.#match(TokenTypes.KW_cuartos, TokenTypes.KW_semifinal, TokenTypes.KW_final)) {
+                try {
+                    this.#FASE();
+                } catch (error) {
+                    this.#addError(`Error procesando fase: ${error.message}`);
+                    this.#saltarHastaProximaFaseOCierre();
+                }
+            } else {
+                this.#addError(`Se esperaba fase (cuartos/semifinal/final), se encontrado '${this.#currentToken?.lexeme}'`);
+                this.#saltarHastaProximaFaseOCierre();
+            }
+            
+            this.#skipOptional(TokenTypes.TK_coma);
+            this.#skipOptional(TokenTypes.TK_punto_coma);
+            this.#skipOptionalSemicolons();
         }
     }
 
+    #saltarHastaProximaFaseOCierre() {
+        while (!this.#match(TokenTypes.EOF) && 
+               !this.#match(TokenTypes.KW_cuartos) && 
+               !this.#match(TokenTypes.KW_semifinal) &&
+               !this.#match(TokenTypes.KW_final) &&
+               !this.#match(TokenTypes.TK_llave_der)) {
+            this.#avanzarToken();
+        }
+        this.#skipOptionalSemicolons();
+    }
+
+    #skipOptional(tokenType) {
+        if (this.#match(tokenType)) {
+            this.#consume(tokenType);
+        }
+    }
+
+    #skipOptionalSemicolons() {
+        while (this.#match(TokenTypes.TK_punto_coma)) {
+            this.#consume(TokenTypes.TK_punto_coma);
+        }
+    }
+
+    // Procesamiento de fase 
     #FASE() {
         let nombreFase = '';
         
@@ -262,44 +429,54 @@ export class TourneyParser {
         } else if (this.#match(TokenTypes.KW_final)) {
             nombreFase = 'final';
             this.#consume(TokenTypes.KW_final);
+        } else {
+            this.#addError(`Nombre de fase no valido: ${this.#currentToken?.lexeme}`);
+            return;
         }
         
         if (nombreFase) {
             this.#consume(TokenTypes.TK_dos_puntos);
             this.#consume(TokenTypes.TK_corchete_izq);
-            this.#LISTA_PARTIDOS(nombreFase);
+            this.#LISTA_PARTIDOS_(nombreFase);
             this.#consume(TokenTypes.TK_corchete_der);
         }
     }
 
-    #LISTA_PARTIDOS(fase) {
-        if (this.#match(TokenTypes.KW_partido)) {
-            const partido = this.#PARTIDO();
-            if (partido) {
+    // Lista de partidos 
+    #LISTA_PARTIDOS_(fase) {
+        while (!this.#match(TokenTypes.TK_corchete_der) && !this.#match(TokenTypes.EOF)) {
+            if (this.#match(TokenTypes.KW_partido)) {
                 try {
-                    partido.fase = fase;
-                    this.#tournament.addPartidoToFase(fase, partido);
-                } catch (error) {
-                    this.#addError(error.message);
-                }
-            }
-            
-            while (this.#match(TokenTypes.TK_coma)) {
-                this.#consume(TokenTypes.TK_coma);
-                if (this.#match(TokenTypes.KW_partido)) {
                     const partido = this.#PARTIDO();
                     if (partido) {
-                        try {
-                            partido.fase = fase;
-                            this.#tournament.addPartidoToFase(fase, partido);
-                        } catch (error) {
-                            this.#addError(error.message);
-                        }
+                        partido.fase = fase;
+                        this.#tournament.addPartidoToFase(fase, partido);
                     }
+                } catch (error) {
+                    this.#addError(`Error procesando partido: ${error.message}`);
+                    this.#saltarHastaProximoPartidoOCierre();
                 }
+            } else {
+                // Token inesperado
+                this.#addError(`Se esperaba 'partido', se encontro '${this.#currentToken?.lexeme}'`);
+                this.#saltarHastaProximoPartidoOCierre();
             }
+            
+            // Saltar coma opcional
+            this.#skipOptional(TokenTypes.TK_coma);
         }
     }
+
+    // Saltar hasta proximo partido o cierre
+    #saltarHastaProximoPartidoOCierre() {
+        while (!this.#match(TokenTypes.EOF) && 
+               !this.#match(TokenTypes.KW_partido) && 
+               !this.#match(TokenTypes.TK_corchete_der)) {
+            this.#avanzarToken();
+        }
+    }
+
+
 
     #PARTIDO() {
         this.#consume(TokenTypes.KW_partido);
@@ -338,22 +515,53 @@ export class TourneyParser {
     }
 
     #ATRIBUTO_PARTIDO(partido) {
-    if (this.#match(TokenTypes.KW_resultado)) {
-        this.#consume(TokenTypes.KW_resultado);
-        this.#consume(TokenTypes.TK_dos_puntos);
-        const resultado = this.#consume(TokenTypes.TK_cadena);
-        try {
-            partido.resultado = resultado?.lexeme || '';
-        } catch (error) {
-            this.#addError(error.message);
+        if (this.#match(TokenTypes.KW_resultado)) {
+            this.#consume(TokenTypes.KW_resultado);
+            this.#consume(TokenTypes.TK_dos_puntos);
+            const resultado = this.#consume(TokenTypes.TK_cadena);
+            try {
+                partido.resultado = resultado?.lexeme || '';
+            } catch (error) {
+                this.#addError(error.message);
+            }
+        } else if (this.#match(TokenTypes.KW_goleadores)) {
+            this.#consume(TokenTypes.KW_goleadores);
+            this.#consume(TokenTypes.TK_dos_puntos);
+            this.#consume(TokenTypes.TK_corchete_izq);
+            this.#LISTA_GOLEADORES(partido);
+            this.#consume(TokenTypes.TK_corchete_der);
+        } else if (this.#match(TokenTypes.KW_goleador)) {
+            this.#consume(TokenTypes.KW_goleador);
+            this.#consume(TokenTypes.TK_dos_puntos);
+            const nombreGoleador = this.#consume(TokenTypes.TK_cadena);
+            
+            if (this.#match(TokenTypes.TK_corchete_izq)) {
+                this.#consume(TokenTypes.TK_corchete_izq);
+                if (this.#match(TokenTypes.KW_minuto)) {
+                    this.#consume(TokenTypes.KW_minuto);
+                    this.#consume(TokenTypes.TK_dos_puntos);
+                    const minuto = this.#consume(TokenTypes.TK_numero);
+                    partido.addGoleador(nombreGoleador?.lexeme || '', parseInt(minuto?.lexeme || '0'));
+                }
+                this.#consume(TokenTypes.TK_corchete_der);
+            }
         }
-    } else if (this.#match(TokenTypes.KW_goleadores)) {  // NUEVO - plural
-        this.#consume(TokenTypes.KW_goleadores);
-        this.#consume(TokenTypes.TK_dos_puntos);
-        this.#consume(TokenTypes.TK_corchete_izq);
-        this.#LISTA_GOLEADORES(partido);  // Nuevo método
-        this.#consume(TokenTypes.TK_corchete_der);
-    } else if (this.#match(TokenTypes.KW_goleador)) {  // EXISTENTE - singular
+    }
+
+    #LISTA_GOLEADORES(partido) {
+        if (this.#match(TokenTypes.KW_goleador)) {
+            this.#GOLEADOR_INDIVIDUAL(partido);
+            
+            while (this.#match(TokenTypes.TK_coma)) {
+                this.#consume(TokenTypes.TK_coma);
+                if (this.#match(TokenTypes.KW_goleador)) {
+                    this.#GOLEADOR_INDIVIDUAL(partido);
+                }
+            }
+        }
+    }
+
+    #GOLEADOR_INDIVIDUAL(partido) {
         this.#consume(TokenTypes.KW_goleador);
         this.#consume(TokenTypes.TK_dos_puntos);
         const nombreGoleador = this.#consume(TokenTypes.TK_cadena);
@@ -369,63 +577,91 @@ export class TourneyParser {
             this.#consume(TokenTypes.TK_corchete_der);
         }
     }
-    }   
 
-    // Nuevo método para lista de goleadores
-    #LISTA_GOLEADORES(partido) {
-    if (this.#match(TokenTypes.KW_goleador)) {
-        this.#GOLEADOR_INDIVIDUAL(partido);
-        
-        while (this.#match(TokenTypes.TK_coma)) {
-            this.#consume(TokenTypes.TK_coma);
-            if (this.#match(TokenTypes.KW_goleador)) {
-                this.#GOLEADOR_INDIVIDUAL(partido);
-            }
-        }
-    }
-    }
-
-    #GOLEADOR_INDIVIDUAL(partido) {
-    this.#consume(TokenTypes.KW_goleador);
-    this.#consume(TokenTypes.TK_dos_puntos);
-    const nombreGoleador = this.#consume(TokenTypes.TK_cadena);
+    // ===== METODOS AUXILIARES MEJORADOS =====
     
-    if (this.#match(TokenTypes.TK_corchete_izq)) {
-        this.#consume(TokenTypes.TK_corchete_izq);
-        if (this.#match(TokenTypes.KW_minuto)) {
-            this.#consume(TokenTypes.KW_minuto);
-            this.#consume(TokenTypes.TK_dos_puntos);
-            const minuto = this.#consume(TokenTypes.TK_numero);
-            partido.addGoleador(nombreGoleador?.lexeme || '', parseInt(minuto?.lexeme || '0'));
-        }
-        this.#consume(TokenTypes.TK_corchete_der);
-    }
-    }
-
-    // ===== AUXILIARY METHODS =====
     #match(...types) {
         this.#currentToken = this.#scanner.look_ahead();
         return types.includes(this.#currentToken.type);
     }
 
+    // metodo simple para avanzar token
+    #avanzarToken() {
+        return this.#scanner.next_token();
+    }
+
+    // Consume 
     #consume(...types) {
         if (this.#match(...types)) {
             return this.#scanner.next_token();
         }
-        this.#addError(`Se esperaba ${types.join(' o ')}, se encontró «${this.#currentToken.lexeme}»`);
+        
+        // Reportar error pero intentar recuperarse
+        this.#addError(`Se esperaba ${types.join(' o ')}, se encontro '${this.#currentToken.lexeme}'`);
+        
+        // : Si esperamos un delimitador importante, buscar el siguiente
+        if (types.includes(TokenTypes.TK_llave_izq) || 
+            types.includes(TokenTypes.TK_llave_der) ||
+            types.includes(TokenTypes.TK_corchete_izq) ||
+            types.includes(TokenTypes.TK_corchete_der)) {
+            
+            // Buscar el siguiente delimitador vÃ¡lido
+            while (!this.#match(TokenTypes.EOF) && !this.#match(...types)) {
+                this.#avanzarToken();
+            }
+            
+            if (this.#match(...types)) {
+                return this.#avanzarToken();
+            }
+        }
+        
         return null;
     }
 
-    #addError(message) {
-        // Use global errors consistently
-        if (!global.errors) {
-            global.errors = [];
+    // Sincronizar hasta proximo atributo o cierre
+    #saltarHastaProximoAtributoOCierre() {
+        while (!this.#match(TokenTypes.EOF) &&
+               !this.#match(TokenTypes.KW_nombre) &&
+               !this.#match(TokenTypes.KW_sede) &&
+               !this.#match(TokenTypes.TK_identificador) &&
+               !this.#match(TokenTypes.TK_llave_der) &&
+               !this.#match(TokenTypes.TK_coma)) {
+            this.#avanzarToken();
         }
-        global.errors.push({
-            numero: global.errors.length + 1,
-            descripcion: message,
-            linea: this.#currentToken?.line || 0,
-            columna: this.#currentToken?.column || 0
-        });
+    }
+
+    //Sincronizar hasta llave cerrada
+    #sincronizarHastaLlaveCerrada() {
+        let nivelLlaves = 1; // Ya estamos dentro de una llave abierta
+        
+        while (!this.#match(TokenTypes.EOF) && nivelLlaves > 0) {
+            if (this.#match(TokenTypes.TK_llave_izq)) {
+                nivelLlaves++;
+            } else if (this.#match(TokenTypes.TK_llave_der)) {
+                nivelLlaves--;
+            }
+            
+            if (nivelLlaves > 0) {
+                this.#avanzarToken();
+            }
+        }
+        
+        // Consumir la llave de cierre si la encontramos
+        if (this.#match(TokenTypes.TK_llave_der)) {
+            this.#avanzarToken();
+        }
+    }
+
+    
+    #synchronize() {
+        this.#avanzarToken();
+        
+        while (!this.#match(TokenTypes.EOF)) {
+            if (this.#match(TokenTypes.TORNEO, TokenTypes.EQUIPOS, TokenTypes.ELIMINACION,
+                           TokenTypes.TK_llave_der, TokenTypes.TK_corchete_der)) {
+                return;
+            }
+            this.#avanzarToken();
+        }
     }
 }

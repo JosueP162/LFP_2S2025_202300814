@@ -1,4 +1,4 @@
-import TokenTypes from '../core/TokenTypes.js';
+import TokenTypes from '../Core/TokenTypes.js';
 export class HTMLReportGenerator {
     #tournament;
 

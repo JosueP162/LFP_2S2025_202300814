@@ -1,4 +1,3 @@
-
 import TokenTypes from './TokenTypes.js';
 
 export class TourneyScanner {
@@ -20,7 +19,6 @@ export class TourneyScanner {
         this.#tokens = [];
         this.#currentIndex = 0;
         
-        // FIXED: Use static properties
         this.#reservedWords = new Map([
             ['TORNEO', TokenTypes.TORNEO],
             ['EQUIPOS', TokenTypes.EQUIPOS],
@@ -53,17 +51,18 @@ export class TourneyScanner {
         
         const code = char.charCodeAt(0);
         
+        // Letras básicas ASCII
         if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
             return true;
         }
         
+        // Guión bajo
         if (code === 95) return true;
         
-        const acentuados = 'áéíóúÁÉÍÓÚñÑ';
-        for (let i = 0; i < acentuados.length; i++) {
-            if (char === acentuados.charAt(i)) {
-                return true;
-            }
+        // Método para caracteres acentuados
+        const acentuados = 'áéíóúÁÉÍÓÚñÑüÜ';
+        if (acentuados.includes(char)) {
+            return true;
         }
         
         return false;
@@ -87,6 +86,14 @@ export class TourneyScanner {
                char === '\r' ||
                char === '\f' ||
                char === '\v';
+    }
+
+    // Lista específica de caracteres que consideramos inválidos
+    #isInvalidChar(char) {
+        if (!char) return false;
+        // Solo caracteres  problemáticos
+        const invalidChars = '@#$%^&*!+=?/\\|<>~`';
+        return invalidChars.includes(char);
     }
 
     #advance() {
@@ -113,6 +120,26 @@ export class TourneyScanner {
         while (this.#currentChar && this.#isWhitespace(this.#currentChar)) {
             this.#advance();
         }
+    }
+
+    // Método más específico para saltar solo caracteres realmente inválidos
+    #skipInvalidChars() {
+        let skipped = false;
+        const startLine = this.#line;
+        const startColumn = this.#column;
+        let invalidChar = '';
+        
+        while (this.#currentChar && this.#isInvalidChar(this.#currentChar)) {
+            if (!invalidChar) invalidChar = this.#currentChar; // Guardar el primer carácter inválido
+            this.#advance();
+            skipped = true;
+        }
+        
+        if (skipped) {
+            this.#addError(`Carácter no reconocido "${invalidChar}"`, startLine, startColumn);
+        }
+        
+        return skipped;
     }
 
     #readIdentifier() {
@@ -157,12 +184,13 @@ export class TourneyScanner {
 
     #readString() {
         let value = '';
+        const startLine = this.#line;
         const startColumn = this.#column;
         this.#advance(); // Skip opening quote
         
         while (this.#currentChar && this.#currentChar !== '"') {
             if (this.#currentChar === '\n') {
-                this.#addError('Cadena sin cerrar - se encontró fin de línea', this.#line, startColumn);
+                this.#addError('Cadena sin cerrar - se encontró fin de línea', startLine, startColumn);
                 break;
             }
             
@@ -181,7 +209,7 @@ export class TourneyScanner {
             return this.#createToken(value, TokenTypes.TK_cadena, this.#line, startColumn);
         } else {
             this.#addError('Se esperaba \'"\'', this.#line, this.#column);
-            return null;
+            return this.#createToken(value, TokenTypes.TK_cadena, this.#line, startColumn);
         }
     }
 
@@ -190,12 +218,14 @@ export class TourneyScanner {
     }
 
     #addError(message, line, column) {
-        // FIXED: Use global errors array consistently
-        if (!global.errors) {
-            global.errors = [];
+        if (!window.global) {
+            window.global = {};
         }
-        global.errors.push({
-            numero: global.errors.length + 1,
+        if (!window.global.errors) {
+            window.global.errors = [];
+        }
+        window.global.errors.push({
+            numero: window.global.errors.length + 1,
             descripcion: message,
             linea: line,
             columna: column
@@ -204,10 +234,17 @@ export class TourneyScanner {
 
     scan() {
         this.#tokens = [];
-        // Don't clear global errors here - let the caller manage it
         
         while (this.#currentChar !== null) {
+            // Saltar espacios en blanco
             this.#skipWhitespace();
+            
+            if (this.#currentChar === null) break;
+            
+            // Verificar y saltar caracteres específicamente inválidos
+            if (this.#skipInvalidChars()) {
+                continue;
+            }
             
             if (this.#currentChar === null) break;
             
@@ -225,12 +262,12 @@ export class TourneyScanner {
                 const token = this.#readString();
                 if (token) this.#tokens.push(token);
             }
-            else if (this.#currentChar === '{') {
-                this.#tokens.push(this.#createToken('{', TokenTypes.TK_llave_izq, this.#line, startColumn));
+            else if (this.#currentChar === '(') {
+                this.#tokens.push(this.#createToken('(', TokenTypes.TK_llave_izq, this.#line, startColumn));
                 this.#advance();
             }
-            else if (this.#currentChar === '}') {
-                this.#tokens.push(this.#createToken('}', TokenTypes.TK_llave_der, this.#line, startColumn));
+            else if (this.#currentChar === ')') {
+                this.#tokens.push(this.#createToken(')', TokenTypes.TK_llave_der, this.#line, startColumn));
                 this.#advance();
             }
             else if (this.#currentChar === '[') {
@@ -249,8 +286,18 @@ export class TourneyScanner {
                 this.#tokens.push(this.#createToken(',', TokenTypes.TK_coma, this.#line, startColumn));
                 this.#advance();
             }
+            else if (this.#currentChar === ';') {
+                this.#tokens.push(this.#createToken(';', TokenTypes.TK_punto_coma, this.#line, startColumn));
+                this.#advance();
+            }
+            else if (this.#currentChar === '_') {
+                // Tratar guiones bajos individuales como caracteres inválidos
+                this.#addError(`Carácter no reconocido "${this.#currentChar}"`, this.#line, startColumn);
+                this.#advance();
+            }
             else {
-                this.#addError(`Carácter no reconocido «${this.#currentChar}»`, this.#line, startColumn);
+                // Cualquier otro carácter no reconocido
+                this.#addError(`Carácter no reconocido "${this.#currentChar}"`, this.#line, startColumn);
                 this.#advance();
             }
         }

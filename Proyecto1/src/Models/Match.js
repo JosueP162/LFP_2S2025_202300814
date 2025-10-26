@@ -43,25 +43,23 @@ export class Match {
     }
 
     set resultado(valor) {
-        if (typeof valor !== 'string') {
-            throw new Error('El resultado debe ser una cadena');
-        }
+    if (typeof valor !== 'string') {
+        valor = ''; // Valor por defecto en lugar de error
+    }
     
-        this.#resultado = valor;
+    this.#resultado = valor;
     
-        // Solo validar formato y determinar ganador si no es "Pendiente"
-        if (valor && valor.toLowerCase() !== 'pendiente') {
-            if (!this.#validateResultFormat(valor)) {
-                throw new Error('El resultado debe tener el formato X-Y (ej: 2-1)');
-            }
+    // Solo validar formato si no es vacío o "Pendiente"
+    if (valor && valor.toLowerCase() !== 'pendiente' && valor.trim() !== '') {
+        if (!this.#validateResultFormat(valor)) {
+            // No lanzar error, solo asignar valor por defecto
+            this.#resultado = 'Pendiente';
+        } else {
             this.#determinarGanador();
             this.#completado = true;
-        } else {
-            // Si es pendiente, no hay ganador
-            this.#ganador = '';
-            this.#completado = false;
         }
     }
+}
 
     set fase(valor) {
         if (!valor) {

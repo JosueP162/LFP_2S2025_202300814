@@ -32,12 +32,13 @@ export default class TokenTypes {
     static KW_DELANTERO = 'DELANTERO';
     
     // Símbolos
-    static TK_llave_izq = '{';
-    static TK_llave_der = '}';
+    static TK_llave_izq = '(';
+    static TK_llave_der = ')';
     static TK_corchete_izq = '[';
     static TK_corchete_der = ']';
     static TK_dos_puntos = ':';
-    static TK_coma = ',';  // FIXED: was ';'
+    static TK_coma = ',';  
+    static TK_punto_coma = ';';
     
     // Literales
     static TK_cadena = 'CADENA';
